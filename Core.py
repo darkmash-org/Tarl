@@ -11,7 +11,10 @@ try:
     from rich import print
 except:
     pass
+import utils
 import time
+import math
+import copy
 import os
 
 
@@ -83,7 +86,11 @@ class TarlCore:
         self.CUR_KEY = ""
         self.mouse_x = 0
         self.mouse_y = 0
-       
+        
+        self.PREV_FRAME = 0
+
+        self.bg_caption = cv2.imread("a.png",-1)
+
         self.out_file = out_file
         self.fps = fps 
         self.keyboard_captions = keyboard_captions
@@ -98,9 +105,8 @@ class TarlCore:
         except:
             print("\n[red]  [-] Mouse pointer - icon not found , switching to default one.. [/red]")
             self.mouse_pointer = cv2.imread("mouse_pointer.png",-1)
-
-        self.mouse_pointer  = cv2.cvtColor(self.mouse_pointer , cv2.COLOR_BGRA2RGBA)
-
+        
+        #self.mouse_pointer =  cv2.cvtColor(self.mouse_pointer, cv2.COLOR_BGR2RGBA)
 
         self.audio_in = audio_in
         self.audio_out = False
@@ -128,126 +134,127 @@ class TarlCore:
         # create the video write object
         out = cv2.VideoWriter(f"{self.out_file}.avi", self.fourcc, self.fps, (self.area[2],self.area[3]))
         
-        delay = 1/self.fps
         
         print("[green]  [+] Starting to record screen..[/green]")
         
         if self.audio_in:
             threading.Thread(target=self.audio_recording_mic).start()
         
+        FRAME_ID = 0
+    
+        
         while not self.STOP_ALL:
             # make a screenshot
             img = pyautogui.screenshot()
-            # convert these pixels to a proper numpy array to work with OpenCV
-            frame = np.array(img)
             
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
-
-            if self.keyboard_captions == True and  self.CUR_KEY != "":
-                overlay = self.make_key_image(self.CUR_KEY)
-                
-
-                # load resized image as grayscale
-                img = overlay
-                print(img.shape)
-                h, w , z= list(img.shape)
-
-                # load background image as grayscale
-                back = frame
-                hh, ww , z= back.shape
-
-                # compute xoff and yoff for placement of upper left corner of resized image
-                yoff = round((hh-h)/2)
-                xoff = round((ww-w)/2)
-
-                # use numpy indexing to place the resized image in the center of background image
-                result = back.copy()
-                
-                result[yoff:yoff+h, xoff:xoff+w] = img
-                
-                frame = result
-                self.CUR_KEY = ""
+            #threading.Thread(target=self.record_funcs, args = (img,out,FRAME_ID)).start()
             
-            if self.show_mouse == True:
-                h = self.mouse_pointer.shape[0]
-                w = self.mouse_pointer.shape[1]
-                frame[self.mouse_y:self.mouse_y+h, self.mouse_x:self.mouse_x+w] = self.mouse_pointer
+            self.record_funcs(img,out,FRAME_ID)
 
-            frame = cv2.cvtColor(frame, cv2.COLOR_RGBA2RGB)
+            #time.sleep(0.01)
 
-
-            out.write(frame)
-        
+            FRAME_ID+=1
         print("[green]  [+] Stoping with no error..  [/green]")
         
+        print(FRAME_ID, self.PREV_FRAME)
+
+        while threading.active_count() > 7:
+            pass
+
         # make sure everything is closed when exited
         cv2.destroyAllWindows()
         out.release()
         self.combine_all()
 
+    def record_funcs(self, img, out, cur_id):
+        
+        # convert these pixels to a proper numpy array to work with OpenCV
+        frame = np.array(img)
+        
+        if self.keyboard_captions == True and  self.CUR_KEY != "":
+            overlay = self.make_key_image(self.CUR_KEY)
+
+            frame = utils.add_transparent_image_center(frame , overlay)
+
+            self.CUR_KEY = ""
+
+        if self.show_mouse == True:
+            frame = utils.add_transparent_image(frame, self.mouse_pointer, self.mouse_x ,self.mouse_y)
+        
+        if self.show_mouse != True and self.keyboard_captions != True:
+            frame  =  cv2.cvtColor(frame, cv2.COLOR_BGR_RGB)
+
+        #if cur_id == 0:
+         #   self.PREV_FRAME = -1
+
+        #while not cur_id - 1 == self.PREV_FRAME:
+         #   print("!!")
+
+        #self.PREV_FRAME += 1
+
+        out.write(frame)
+
     def on_press(self, key):
         try:
-            print('alphanumeric key {0} pressed'.format(key.char))
+           
             self.CUR_KEY = f"Presd {key.char}"
         except AttributeError:
+            key =  str(key).replace("Key.","")
+
             self.CUR_KEY = f"Presd {key}"
-            print('special key {0} pressed'.format(key))
+         
 
     def on_release(self, key):
-        print('{0} released'.format(key))
+        key_ =  str(key).replace("Key.","")
+       
         
-        self.CUR_KEY = f"Reld {key}"
+        self.CUR_KEY = f"Reld {key_}"
 
         if key == keyboard.Key.esc:
             self.STOP_ALL = True 
+            self.mouse_listener.stop()
             # Stop listener
             return False
 
     def on_move(self, x, y):
-        print('Pointer moved to {0}'.format((x, y)))
+        #print('Pointer moved to {0}'.format((x, y)))
         self.mouse_x = x
         self.mouse_y = y
 
     def on_click(self , x, y, button, pressed):
-        print('{0} at {1}'.format('Pressed' if pressed else 'Released',(x, y)))
-
+        #print('{0} at {1}'.format('Pressed' if pressed else 'Released',(x, y)))
+        pass
     def on_scroll(self , x, y, dx, dy):
-        print('Scrolled {0} at {1}'.format('down' if dy < 0 else 'up',(x, y)))
-        self.scroll = True
+        #print('Scrolled {0} at {1}'.format('down' if dy < 0 else 'up',(x, y)))
+        pass
 
     def make_key_image(self, key):	
         try:
             return self.FOUND_KEYS[key]
-        
+       
         except:
-            # path
-            path = "a.png"
-	
-            # Reading an image in default mode
-            image = cv2.imread(path,1)
-	
-            # font
+           
+            
+            img = self.bg_caption.copy()
+            
+            text = str(key)
+
             font = cv2.FONT_HERSHEY_SIMPLEX
 
-            # org
-            org = (round(image.shape[1]/2-len(str(key))/2), round(image.shape[0]/2-len(str(key))/2))
-            org = (50,round(image.shape[0]/2))
-            print(org)
-            # fontScale
-            fontScale = 1
+            # get boundary of this text
+            textsize = cv2.getTextSize(text, font, 1, 2)[0]
 
-            # Blue color in BGR
-            color = (0, 0, 0)
-
-            # Line thickness of 2 px
-            thickness = 3 
-
-            # Using cv2.putText() method
-            image = cv2.putText(image, key, org, font,fontScale, color, thickness, cv2.LINE_AA)
-
-            self.FOUND_KEYS[key] = image
+            # get coords based on boundary
+            textX = round((img.shape[1] - textsize[0]) / 2)
+            textY = round((img.shape[0] + textsize[1]) / 2)
             
-            return image
+            # add text centered on image
+            img = cv2.putText(img, text, (textX, textY ), font, 1, (0,0,0), 2)
+
+            self.FOUND_KEYS.setdefault(key , img)
+            
+
+            return img
 
     def audio_recording_mic(self):
 
