@@ -13,7 +13,7 @@ More info regarding the project can be found in our projects site
 - comment the last line in test.py to not rec audio, or change parms..
 - make sure u are on linux [under dev ~ and is bein developed on linux]
 - if any error regarding libs come , install em using (pip install lib_name)
-- if you face any other difficulllty pls feel free to join our discor server and ask : )
+- if you face any other difficulllty pls feel free to join our discord server and ask : )
 
 
 <hr>
