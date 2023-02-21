@@ -14,3 +14,14 @@ More info regarding the project can be found in our projects site
 - make sure u are on linux [under dev ~ and is bein developed on linux]
 - if any error regarding libs come , install em using (pip install lib_name)
 - if you face any other difficulllty pls feel free to join our discor server and ask : )
+
+
+<hr>
+<details>
+    <summary><b>✨Discord Server & Support</b></summary><br/>
+ <h3 align="center">Darkmash Official Server </h3>
+ 
+### ⬇️ ⬇️ ⬇️ ⬇️ INVITE LINK ⬇️ ⬇️ ⬇️ ⬇️ 
+
+https://discord.gg/SC54bSgnyQ
+</details>
